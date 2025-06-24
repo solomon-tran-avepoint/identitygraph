@@ -4,16 +4,61 @@
     ViewData["Title"] = "Microsoft Entra ID Users";
 }
 
-<div class="container">
-    <div class="row">
+<div class="container">    <div class="row">
         <div class="col-md-12">
             <h2>@ViewData["Title"]</h2>
+            
+            <!-- Token Type Information and Switching -->
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    @if (!string.IsNullOrEmpty(ViewBag.TokenType))
+                    {
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> Authentication Method</h6>
+                            <p><strong>Current:</strong> <span class="badge bg-primary">@ViewBag.TokenType</span></p>
+                            @if (!string.IsNullOrEmpty(ViewBag.InfoMessage))
+                            {
+                                <p class="mb-0">@ViewBag.InfoMessage</p>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group" role="group">
+                        <a asp-action="Index" asp-route-useUserToken="false" 
+                           class="btn @(ViewBag.UseUserToken != true ? "btn-primary" : "btn-outline-primary")">
+                            <i class="fas fa-building"></i> App Token
+                        </a>
+                        <a asp-action="Index" asp-route-useUserToken="true" 
+                           class="btn @(ViewBag.UseUserToken == true ? "btn-success" : "btn-outline-success")">
+                            <i class="fas fa-user"></i> User Token
+                        </a>
+                    </div>
+                </div>
+            </div>
               @if (!string.IsNullOrEmpty(ViewBag.Error))
             {
-                <div class="alert alert-danger" role="alert">
-                    @ViewBag.Error
+                <div class="alert @(ViewBag.ShowTokenLimitation == true ? "alert-warning" : "alert-danger")" role="alert">
+                    <h6><i class="fas @(ViewBag.ShowTokenLimitation == true ? "fa-info-circle" : "fa-exclamation-triangle")"></i> @ViewBag.Error</h6>
                     
-                    @if (ViewBag.PermissionHelp == true)
+                    @if (!string.IsNullOrEmpty(ViewBag.TokenInfo))
+                    {
+                        <p>@ViewBag.TokenInfo</p>
+                    }
+                    
+                    @if (ViewBag.ShowTokenLimitation == true)
+                    {
+                        <hr>
+                        <h6>💡 Understanding the Limitation:</h6>
+                        <p>This application uses <strong>IdentityServer</strong> for authentication and <strong>Microsoft Graph</strong> for data access. These systems use different token formats:</p>
+                        <ul>
+                            <li><strong>IdentityServer tokens</strong>: Used for local application authentication</li>
+                            <li><strong>Azure AD tokens</strong>: Required for Microsoft Graph API access</li>
+                        </ul>
+                        <p><strong>Current solution:</strong> The app uses application permissions to access Graph API data on behalf of all users.</p>
+                        <p><strong>Alternative approaches:</strong> Replace IdentityServer with direct Azure AD authentication for full delegated permissions support.</p>
+                    }
+                    else if (ViewBag.PermissionHelp == true)
                     {
                         <hr>
                         <h6>🔧 How to fix this:</h6>

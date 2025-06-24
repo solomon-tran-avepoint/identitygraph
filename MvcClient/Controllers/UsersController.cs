@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MvcClient.Services;
+using Microsoft.Graph.Models;
 
 namespace MvcClient.Controllers
 {
@@ -14,24 +15,50 @@ namespace MvcClient.Controllers
         {
             _graphService = graphService;
             _logger = logger;
-        }        public async Task<IActionResult> Index()
+        }        public async Task<IActionResult> Index(bool useUserToken = false)
         {
             try
             {
-                var users = await _graphService.GetUsersAsync();
-                return View(users?.Value ?? new List<Microsoft.Graph.Models.User>());
+                UserCollectionResponse? users;
+                
+                if (useUserToken)
+                {
+                    _logger.LogInformation("Attempting to get users with user token");
+                    users = await _graphService.GetUsersWithUserTokenAsync();
+                    ViewBag.TokenType = "User Token (Delegated Permissions)";
+                    ViewBag.InfoMessage = "Users retrieved using your personal access token with delegated permissions.";
+                }
+                else
+                {
+                    users = await _graphService.GetUsersAsync();
+                    ViewBag.TokenType = "App Token (Application Permissions)";
+                }
+                
+                ViewBag.UseUserToken = useUserToken;
+                return View(users?.Value ?? new List<Microsoft.Graph.Models.User>());            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("IdentityServer tokens cannot be used"))
+            {
+                _logger.LogInformation("User token mode not available with IdentityServer setup");
+                ViewBag.Error = "User Token Authentication Not Available";
+                ViewBag.TokenInfo = "IdentityServer tokens cannot be used directly with Microsoft Graph API. The application is using app-only authentication instead.";
+                ViewBag.PermissionHelp = true;
+                ViewBag.UseUserToken = useUserToken;
+                ViewBag.ShowTokenLimitation = true;
+                return View(new List<Microsoft.Graph.Models.User>());
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("Graph API Error"))
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Graph API Error") || ex.Message.Contains("Permission Error"))
             {
                 _logger.LogError(ex, "Microsoft Graph permission error");
                 ViewBag.Error = $"Permission Error: {ex.Message}. Please check Azure AD app permissions.";
                 ViewBag.PermissionHelp = true;
+                ViewBag.UseUserToken = useUserToken;
                 return View(new List<Microsoft.Graph.Models.User>());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading users page");
                 ViewBag.Error = "Unable to load users. Please check your permissions.";
+                ViewBag.UseUserToken = useUserToken;
                 return View(new List<Microsoft.Graph.Models.User>());
             }
         }

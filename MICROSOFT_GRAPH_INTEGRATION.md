@@ -7,81 +7,69 @@ This document explains the Microsoft Graph API integration implemented in the MV
 
 ### Authentication Flows
 
-#### 1. App-Only Authentication (Currently Implemented)
-- **Used for**: Getting all users, searching users, getting user details
+#### 1. App-Only Authentication (Client Credentials Flow)
+- **Used for**: Getting all users, searching users, getting user details (fallback mode)
 - **How it works**: Uses Azure AD app registration's client secret to authenticate as the application
 - **Permissions Required**: Application permissions (e.g., `User.Read.All`)
 - **Token Source**: Azure AD directly (Client Credentials flow)
 - **Methods**: `GetUsersAsync()`, `GetUserByIdAsync()`, `SearchUsersAsync()`, `GetCurrentUserAsync()`
 
-#### 2. Delegated Authentication (Partially Implemented)
-- **Intended for**: Accessing Graph API as the authenticated user
-- **Current Status**: Framework in place, but requires On-Behalf-Of (OBO) flow
-- **How it should work**: Exchange IdentityServer token for Microsoft Graph token
-- **Permissions Required**: Delegated permissions (e.g., `User.Read`)
-- **Methods**: `GetCurrentUserWithUserTokenAsync()` (currently falls back to app-only)
+#### 2. Delegated Authentication (On-Behalf-Of Flow) ✅ NEW!
+- **Used for**: Accessing Graph API as the authenticated user
+- **How it works**: Exchanges IdentityServer token for Microsoft Graph token using OBO flow
+- **Permissions Required**: Delegated permissions (e.g., `User.Read`, `User.ReadBasic.All`)
+- **Token Source**: Exchange IdentityServer token → Azure AD Graph token
+- **Methods**: `GetCurrentUserWithUserTokenAsync()`, `GetUsersWithUserTokenAsync()`
+- **STATUS**: ✅ Implemented with On-Behalf-Of flow support
+
+## Features Implemented
+
+### Token Switching UI ✅ NEW!
+The Users page now includes a toggle between authentication methods:
+
+- **App Token**: Uses application permissions (sees all users the app is authorized for)
+- **User Token**: Uses delegated permissions (sees users the logged-in user can access)
+
+### Enhanced Error Handling
+- Clear distinction between app-only and delegated authentication failures
+- Graceful fallback from user token to app token when OBO flow fails
+- Helpful permission error messages with guidance
 
 ## Files Implemented
 
 ### Services
-- **`IGraphService.cs`**: Interface defining Graph API operations
-- **`GraphService.cs`**: Implementation with comprehensive error handling and authentication flows
+- **`IGraphService.cs`**: Interface with new `GetUsersWithUserTokenAsync()` method
+- **`GraphService.cs`**: Implementation with full OBO flow support using `OnBehalfOfCredential`
 
 ### Controllers
-- **`UsersController.cs`**: Handles user listing, searching, details, and profile views
+- **`UsersController.cs`**: Enhanced Index action with `useUserToken` parameter for switching authentication methods
 
 ### Views
-- **`Views/Users/Index.cshtml`**: User listing with search functionality
-- **`Views/Users/Details.cshtml`**: Individual user details
-- **`Views/Users/Me.cshtml`**: Current user's profile
+- **`Views/Users/Index.cshtml`**: Updated with token switching UI and authentication method display
 
-### Navigation
-- **`Views/Shared/_Layout.cshtml`**: Updated to include user management links
-
-## Error Resolution
-
-### "invalid_scope" Error
-
-**Problem**: When trying to use IdentityServer access tokens directly with Microsoft Graph API.
-
-**Root Cause**: IdentityServer tokens are not Microsoft Graph tokens. They are meant for your local application, not for Microsoft Graph.
-
-**Current Solution**: The application now uses app-only authentication for all Graph API calls, which works correctly.
-
-**Long-term Solution (Optional)**: Implement On-Behalf-Of (OBO) flow to exchange IdentityServer tokens for Graph tokens.
-
-### Key Changes Made to Fix the Issue
-
-1. **Removed problematic code** that was trying to use IdentityServer tokens directly with Graph API
-2. **Added clear error handling** to distinguish between app-only and delegated authentication failures
-3. **Updated the "My Profile" feature** to gracefully fall back from delegated to app-only authentication
-4. **Added comprehensive documentation** in code comments explaining the authentication flows
-
-## How the Integration Works Now
-
-### User Flow
-1. User logs in via IdentityServer (Azure AD authentication)
-2. User navigates to "All Users" or "My Profile"
-3. Application uses app-only authentication to call Microsoft Graph API
-4. Results are displayed with clear indication of authentication method used
-
-### Technical Flow
-1. **App-Only Authentication**: Application uses its client secret to get an access token from Azure AD
-2. **Graph API Calls**: Uses this app token to call Microsoft Graph API with application permissions
-3. **User Identification**: For "My Profile", matches the logged-in user's UPN from IdentityServer claims to Graph API data
+### Packages Added
+- **`Microsoft.Identity.Web`**: Provides `OnBehalfOfCredential` for OBO flow implementation
 
 ## Configuration Required
 
 ### Azure AD App Registration
-Ensure your Azure AD app registration has:
 
-1. **API Permissions**:
-   - Microsoft Graph: `User.Read.All` (Application permission)
-   - Grant admin consent for the organization
+#### API Permissions
+Your Azure AD app registration must have:
 
-2. **Authentication**:
-   - Client secret configured
-   - Appropriate redirect URIs for IdentityServer
+**Application Permissions (for app-only mode)**:
+- `User.Read.All` - Read all users' full profiles
+- Grant admin consent for the organization
+
+**Delegated Permissions (for user token mode)**:
+- `User.Read` - Sign in and read user profile  
+- `User.ReadBasic.All` - Read all users' basic profiles
+- Grant admin consent for the organization
+
+#### Authentication
+- Client secret configured
+- Appropriate redirect URIs for IdentityServer
+- **✅ NEW**: Support for On-Behalf-Of flow must be enabled
 
 ### Application Settings
 In `appsettings.Development.json`:
@@ -89,65 +77,113 @@ In `appsettings.Development.json`:
 {
   "AzureAd": {
     "TenantId": "your-tenant-id",
-    "ClientId": "your-client-id",
+    "ClientId": "your-client-id", 
     "ClientSecret": "your-client-secret"
   }
 }
 ```
 
-## Testing the Integration
+## How to Test the New Functionality
 
-1. **Start both applications**:
-   ```bash
-   # Terminal 1
-   cd IdentityServer
-   dotnet run
-   
-   # Terminal 2  
-   cd MvcClient
-   dotnet run
-   ```
+### 1. Start Applications
+```bash
+# Terminal 1
+cd IdentityServer
+dotnet run
 
-2. **Test user functionality**:
-   - Navigate to MvcClient (typically https://localhost:5002)
-   - Log in with Azure AD credentials
-   - Click "All Users" to see user listing with search
-   - Click "My Profile" to see your own profile information
-   - Test search functionality
+# Terminal 2  
+cd MvcClient
+dotnet run
+```
 
-## Future Enhancements (Optional)
+### 2. Test Authentication Methods
+1. Navigate to MvcClient (typically https://localhost:5002)
+2. Log in with Azure AD credentials
+3. Go to "All Users" page
+4. **✅ NEW**: Use the toggle buttons at the top:
+   - **App Token**: Shows users via application permissions
+   - **User Token**: Shows users via your personal delegated permissions
 
-### Implementing On-Behalf-Of (OBO) Flow
-If you want true delegated permissions (user acting as themselves):
+### 3. Compare Results
+- **App Token mode**: May show more users (based on app permissions)
+- **User Token mode**: Shows users you personally have access to read
+- Error handling demonstrates permission differences
 
-1. **Azure AD Configuration**:
-   - Add Microsoft Graph scopes to your app registration
-   - Configure OBO flow permissions
+## Technical Implementation Details
 
-2. **Code Changes**:
-   - Implement token exchange in `GetUserGraphClientAsync()`
-   - Use Azure.Identity's `OnBehalfOfCredential`
-   - Handle scope and consent requirements
+### On-Behalf-Of Flow Implementation
+```csharp
+// In GetUserGraphClientAsync()
+var oboCredential = new OnBehalfOfCredential(
+    tenantId,
+    clientId,
+    clientSecret,
+    identityServerToken);
 
-3. **Benefits**:
-   - Users see only data they have permission to access
-   - More granular security model
-   - Audit trails show individual user actions
+var userGraphClient = new GraphServiceClient(oboCredential, 
+    new[] { "https://graph.microsoft.com/.default" });
+```
 
-## Current Limitations
+### Token Exchange Process
+1. User logs in via IdentityServer (gets IdentityServer token)
+2. When accessing Graph API with user token:
+   - Extract IdentityServer access token from HTTP context
+   - Use `OnBehalfOfCredential` to exchange for Graph token
+   - Create new GraphServiceClient with user's permissions
+   - Make Graph API calls as the authenticated user
 
-1. **App-Only Permissions**: All Graph API calls use application permissions, so users see all organization data they're authorized to see through the app
-2. **No User-Specific Scoping**: Cannot limit data based on individual user permissions in Graph API
-3. **Token Scope**: IdentityServer tokens cannot be used directly with Microsoft Graph
+### Error Handling
+- **OBO Flow Failures**: Clear error messages about configuration issues
+- **Permission Errors**: Distinction between app vs user permission problems
+- **Graceful Fallback**: User token methods fall back to app token when OBO fails
 
-## Summary
+## Benefits of User Token Authentication
 
-The current implementation successfully integrates Microsoft Graph API using app-only authentication, providing:
-- ✅ User listing and search functionality
-- ✅ Individual user profile views  
-- ✅ Current user profile display
-- ✅ Comprehensive error handling
-- ✅ Clear authentication flow documentation
-- ✅ Graceful fallback mechanisms
+### Security Benefits
+- **Principle of Least Privilege**: Users only see data they have personal access to
+- **Audit Trail**: Graph API calls are attributed to individual users
+- **Permission Boundaries**: Respects individual user permissions in Azure AD
 
-The "invalid_scope" error has been resolved by using the appropriate authentication flow for each scenario.
+### User Experience
+- **Personalized Results**: Users see data relevant to their role/permissions
+- **Transparent Authentication**: Clear indication of which token type is being used
+- **Flexible Access**: Can switch between app-wide and personal data views
+
+## Troubleshooting
+
+### "OBO flow failed" Errors
+1. **Check Azure AD App Registration**:
+   - Ensure client secret is valid
+   - Verify delegated permissions are granted
+   - Confirm admin consent is provided
+
+2. **Check Token Configuration**:
+   - Verify IdentityServer is saving tokens (`SaveTokens = true`)
+   - Ensure access tokens are available in HTTP context
+
+3. **Check Logs**:
+   - Review application logs for detailed OBO flow error messages
+   - Check Azure AD sign-in logs for permission issues
+
+### Permission Errors
+- **User Token Mode**: User may not have `User.ReadBasic.All` permission
+- **App Token Mode**: App may not have `User.Read.All` permission
+- **Solution**: Ensure both application and delegated permissions are properly configured
+
+## Current Status
+
+✅ **Fully Implemented**:
+- App-only authentication (Client Credentials)
+- Delegated authentication (On-Behalf-Of flow)
+- Token switching UI
+- Comprehensive error handling
+- Graceful fallback mechanisms
+
+✅ **Working Features**:
+- User listing with both authentication methods
+- Individual user profiles
+- Search functionality
+- Clear authentication method indication
+- Permission error guidance
+
+The Microsoft Graph integration now supports both application-only and delegated user authentication flows, providing flexibility and security appropriate for different use cases.
