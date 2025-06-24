@@ -1,0 +1,90 @@
+using Microsoft.Graph;
+using Microsoft.Graph.Models;
+using Azure.Identity;
+
+namespace MvcClient.Services
+{
+    public class GraphService : IGraphService
+    {
+        private readonly GraphServiceClient _graphServiceClient;
+        private readonly ILogger<GraphService> _logger;
+
+        public GraphService(IConfiguration configuration, ILogger<GraphService> logger)
+        {
+            _logger = logger;
+            
+            var clientId = configuration["AzureAd:ClientId"];
+            var clientSecret = configuration["AzureAd:ClientSecret"];
+            var tenantId = configuration["AzureAd:TenantId"];
+
+            var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
+            _graphServiceClient = new GraphServiceClient(credential);
+        }
+
+        public async Task<UserCollectionResponse?> GetUsersAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting all users from Microsoft Graph");
+                
+                var users = await _graphServiceClient.Users
+                    .GetAsync(requestConfiguration =>
+                    {
+                        requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                    });
+
+                _logger.LogInformation($"Retrieved {users?.Value?.Count ?? 0} users from Microsoft Graph");
+                return users;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting users from Microsoft Graph");
+                throw;
+            }
+        }
+
+        public async Task<User?> GetUserByIdAsync(string userId)
+        {
+            try
+            {
+                _logger.LogInformation($"Getting user {userId} from Microsoft Graph");
+                
+                var user = await _graphServiceClient.Users[userId]
+                    .GetAsync(requestConfiguration =>
+                    {
+                        requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                    });
+
+                return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting user {userId} from Microsoft Graph");
+                throw;
+            }
+        }
+
+        public async Task<UserCollectionResponse?> SearchUsersAsync(string searchQuery)
+        {
+            try
+            {
+                _logger.LogInformation($"Searching users with query: {searchQuery}");
+                
+                var users = await _graphServiceClient.Users
+                    .GetAsync(requestConfiguration =>
+                    {
+                        requestConfiguration.QueryParameters.Filter = $"startswith(displayName,'{searchQuery}') or startswith(mail,'{searchQuery}') or startswith(userPrincipalName,'{searchQuery}')";
+                        requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                    });
+
+                _logger.LogInformation($"Found {users?.Value?.Count ?? 0} users matching query: {searchQuery}");
+                return users;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error searching users with query: {searchQuery}");
+                throw;
+            }
+        }
+    }
+}

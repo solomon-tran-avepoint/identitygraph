@@ -1,0 +1,74 @@
+@model Microsoft.Graph.Models.User
+
+@{
+    ViewData["Title"] = "User Details";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4>@ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Display Name:</dt>
+                                    <dd class="col-sm-8">@Model.DisplayName</dd>
+
+                                    <dt class="col-sm-4">Email:</dt>
+                                    <dd class="col-sm-8">@Model.Mail</dd>
+
+                                    <dt class="col-sm-4">User Principal Name:</dt>
+                                    <dd class="col-sm-8">@Model.UserPrincipalName</dd>
+
+                                    <dt class="col-sm-4">User ID:</dt>
+                                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Job Title:</dt>
+                                    <dd class="col-sm-8">@(Model.JobTitle ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Department:</dt>
+                                    <dd class="col-sm-8">@(Model.Department ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Office Location:</dt>
+                                    <dd class="col-sm-8">@(Model.OfficeLocation ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Account Enabled:</dt>
+                                    <dd class="col-sm-8">
+                                        @if (Model.AccountEnabled == true)
+                                        {
+                                            <span class="badge bg-success">Enabled</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Disabled</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            User not found.
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,9 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
+using MvcClient.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Register Graph service
+builder.Services.AddScoped<IGraphService, GraphService>();
 
 
 var clientId = builder.Configuration["IdentityServer:Clients:Mvc:ClientId"];
