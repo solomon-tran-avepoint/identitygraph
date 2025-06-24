@@ -1,0 +1,23 @@
+@{
+    ViewData["Title"] = "Claims";
+}
+
+<h2>Claims</h2>
+
+<dl class="row">
+    @foreach (var claim in User.Claims)
+    {
+        <dt class="col-sm-3">@claim.Type</dt>
+        <dd class="col-sm-9">@claim.Value</dd>
+    }
+</dl>
+
+@if (ViewData["AccessToken"] != null)
+{
+    <h3>Access Token</h3>
+    <textarea class="form-control" rows="10" readonly>@ViewData["AccessToken"]</textarea>
+}
+
+<p>
+    <a href="@Url.Action("Index")" class="btn btn-secondary">Back to Home</a>
+</p>

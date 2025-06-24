@@ -1,0 +1,24 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to MVC Client</h1>
+    
+    @if (User.Identity.IsAuthenticated)
+    {
+        <h2>Hello @User.Identity.Name!</h2>
+        <p>You are successfully authenticated via Duende IdentityServer and Azure AD.</p>
+        
+        <div class="mt-4">
+            <a href="@Url.Action("Privacy")" class="btn btn-primary">Go to Privacy (Requires Authentication)</a>
+            <a href="@Url.Action("Claims")" class="btn btn-info">View Claims</a>
+            <a href="@Url.Action("SignOut")" class="btn btn-danger">Sign Out</a>
+        </div>
+    }
+    else
+    {
+        <p>You are not authenticated. Please log in to access protected resources.</p>
+        <a href="@Url.Action("Login")" class="btn btn-primary">Log In</a>
+    }
+</div>

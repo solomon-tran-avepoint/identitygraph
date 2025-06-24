@@ -1,0 +1,75 @@
+# .gitignore for .NET projects (including Razor Pages)
+
+# Build results
+bin/
+obj/
+
+# settings files
+appsettings.Development.json
+appsettings.Production.json
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
+
+# ASP.NET Scaffolding
+ScaffoldingReadMe.txt
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Others
+*.swp
+*.bak
+*.tmp
+
+# Publish output
+publish/
+
+# Azure Pipelines
+*.azure-pipelines.yml
+
+# Local environment
+.env
+
+# Test results
+TestResults/
+
+# Coverage results
+coverage/
+
+# IIS Express
+.vs/
+
+# Resharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+# DotCover
+*.dotCover
+
+# NCrunch
+*.ncrunch*
+NCrunchTemp_*
+
+# SonarQube
+.sonar/
+
+# User secrets
+secrets.json
