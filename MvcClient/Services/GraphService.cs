@@ -131,6 +131,75 @@ namespace MvcClient.Services
                 _logger.LogError(ex, "Error getting current user information");
                 throw;
             }
+        }        // Method to get Graph client with user's token (delegated permissions)
+        private async Task<GraphServiceClient?> GetUserGraphClientAsync()
+        {
+            try
+            {
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.User?.Identity?.IsAuthenticated == true)
+                {
+                    // Try to get the access token for Microsoft Graph
+                    var accessToken = await httpContext.GetTokenAsync("access_token");
+                    
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        _logger.LogInformation("Found user access token, creating Graph client with user context");
+                        
+                        // Create HttpClient with Authorization header
+                        var httpClient = new HttpClient();
+                        httpClient.DefaultRequestHeaders.Authorization = 
+                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                        
+                        // Create Graph client with custom HttpClient
+                        var graphClient = new GraphServiceClient(httpClient);
+                        return graphClient;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No access token found in user context");
+                    }
+                }
+                
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user Graph client");
+                return null;
+            }
+        }
+
+        // Method to get current user using THEIR OWN token (delegated permissions)
+        public async Task<User?> GetCurrentUserWithUserTokenAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting current user with user token");
+
+                var userGraphClient = await GetUserGraphClientAsync();
+                if (userGraphClient != null)
+                {
+                    // This uses USER'S TOKEN with delegated permissions
+                    var me = await userGraphClient.Me
+                        .GetAsync(requestConfiguration =>
+                        {
+                            requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                        });
+
+                    _logger.LogInformation($"Retrieved current user via user token: {me?.DisplayName}");
+                    return me;
+                }
+
+                // Fallback to app token method
+                return await GetCurrentUserAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user with user token, falling back to app token");
+                // Fallback to app token method
+                return await GetCurrentUserAsync();
+            }
         }
     }
 }

@@ -79,18 +79,20 @@ namespace MvcClient.Controllers
                 ViewBag.Error = "Unable to search users. Please try again.";
                 return View("Index", new List<Microsoft.Graph.Models.User>());
             }
-        }
-
-        public async Task<IActionResult> Me()
+        }        public async Task<IActionResult> Me()
         {
             try
             {
-                var currentUser = await _graphService.GetCurrentUserAsync();
+                // Try using user's own token first (delegated permissions)
+                var currentUser = await _graphService.GetCurrentUserWithUserTokenAsync();
                 if (currentUser == null)
                 {
                     ViewBag.Error = "Unable to retrieve your profile information.";
+                    ViewBag.TokenInfo = "This could be because the access token doesn't include Graph API scopes.";
                     return View();
                 }
+                
+                ViewBag.TokenType = "User Token (Delegated Permissions)";
                 return View(currentUser);
             }
             catch (Exception ex)

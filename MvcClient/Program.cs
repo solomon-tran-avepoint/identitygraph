@@ -30,12 +30,12 @@ builder.Services.AddAuthentication(options =>
 
     options.ClientId = clientId;
     options.ClientSecret = clientSecret;
-    options.ResponseType = "code";
-
-    options.Scope.Clear();
+    options.ResponseType = "code";    options.Scope.Clear();
     options.Scope.Add("openid");
     options.Scope.Add("profile");
     options.Scope.Add("scope1");
+    options.Scope.Add("https://graph.microsoft.com/User.Read");
+    options.Scope.Add("https://graph.microsoft.com/User.ReadBasic.All");
 
     options.GetClaimsFromUserInfoEndpoint = true;
 
