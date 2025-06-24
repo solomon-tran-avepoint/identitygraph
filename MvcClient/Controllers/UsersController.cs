@@ -85,20 +85,41 @@ namespace MvcClient.Controllers
             {
                 // Try using user's own token first (delegated permissions)
                 var currentUser = await _graphService.GetCurrentUserWithUserTokenAsync();
-                if (currentUser == null)
-                {
-                    ViewBag.Error = "Unable to retrieve your profile information.";
-                    ViewBag.TokenInfo = "This could be because the access token doesn't include Graph API scopes.";
-                    return View();
-                }
-                
                 ViewBag.TokenType = "User Token (Delegated Permissions)";
                 return View(currentUser);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("On-Behalf-Of"))
+            {
+                _logger.LogInformation("User token flow not available, falling back to app token");
+                
+                try
+                {
+                    // Fallback to app token method
+                    var currentUser = await _graphService.GetCurrentUserAsync();
+                    if (currentUser == null)
+                    {
+                        ViewBag.Error = "Unable to retrieve your profile information.";
+                        ViewBag.TokenInfo = "User not found in directory.";
+                        return View();
+                    }
+                    
+                    ViewBag.TokenType = "App Token (Application Permissions)";
+                    ViewBag.InfoMessage = "Note: Displaying your profile using app-only authentication. For true delegated access, On-Behalf-Of (OBO) flow setup is required.";
+                    return View(currentUser);
+                }
+                catch (Exception fallbackEx)
+                {
+                    _logger.LogError(fallbackEx, "Error in fallback method");
+                    ViewBag.Error = "Unable to retrieve your profile information.";
+                    ViewBag.TokenInfo = ex.Message;
+                    return View();
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error loading current user profile");
                 ViewBag.Error = "Unable to load your profile. Please try again.";
+                ViewBag.TokenInfo = ex.Message;
                 return View();
             }
         }

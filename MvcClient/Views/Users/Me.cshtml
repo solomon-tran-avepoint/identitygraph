@@ -11,13 +11,24 @@
                 <div class="card-header bg-primary text-white">
                     <h4><i class="fas fa-user"></i> @ViewData["Title"]</h4>
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(ViewBag.Error))
+                <div class="card-body">                    @if (!string.IsNullOrEmpty(ViewBag.Error))
                     {
                         <div class="alert alert-warning" role="alert">
+                            <h6><i class="fas fa-exclamation-triangle"></i> Notice</h6>
                             @ViewBag.Error
-                            <hr>
-                            <small>This shows your profile information from Microsoft Graph API using your authenticated session.</small>
+                            @if (!string.IsNullOrEmpty(ViewBag.TokenInfo))
+                            {
+                                <hr>
+                                <small>Technical Details: @ViewBag.TokenInfo</small>
+                            }
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(ViewBag.InfoMessage))
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <h6><i class="fas fa-info-circle"></i> Information</h6>
+                            @ViewBag.InfoMessage
                         </div>
                     }
 

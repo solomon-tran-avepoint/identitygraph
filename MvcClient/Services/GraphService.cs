@@ -5,6 +5,26 @@ using Microsoft.AspNetCore.Authentication;
 
 namespace MvcClient.Services
 {
+    /// <summary>
+    /// Microsoft Graph Service for accessing Azure AD user data
+    /// 
+    /// AUTHENTICATION FLOWS:
+    /// 1. App-Only (Client Credentials): Uses app registration's client secret to access Graph API
+    ///    - Used for: GetUsersAsync, GetUserByIdAsync, SearchUsersAsync, GetCurrentUserAsync
+    ///    - Permissions: Application permissions (e.g., User.Read.All)
+    ///    - Runs as the application, not as a specific user
+    /// 
+    /// 2. Delegated (On-Behalf-Of): Would use user's token to access Graph API as that user
+    ///    - Intended for: GetCurrentUserWithUserTokenAsync 
+    ///    - Permissions: Delegated permissions (e.g., User.Read)
+    ///    - Runs as the authenticated user
+    ///    - STATUS: Not implemented - requires OBO flow setup
+    /// 
+    /// CURRENT LIMITATION:
+    /// IdentityServer tokens cannot be used directly with Microsoft Graph.
+    /// To use delegated permissions, we need to implement the On-Behalf-Of (OBO) flow
+    /// which exchanges the IdentityServer token for a Microsoft Graph token.
+    /// </summary>
     public class GraphService : IGraphService
     {
         private readonly GraphServiceClient _graphServiceClient;
@@ -131,7 +151,7 @@ namespace MvcClient.Services
                 _logger.LogError(ex, "Error getting current user information");
                 throw;
             }
-        }        // Method to get Graph client with user's token (delegated permissions)
+        }        // Method to get Graph client with user's token via On-Behalf-Of flow
         private async Task<GraphServiceClient?> GetUserGraphClientAsync()
         {
             try
@@ -139,21 +159,19 @@ namespace MvcClient.Services
                 var httpContext = _httpContextAccessor.HttpContext;
                 if (httpContext?.User?.Identity?.IsAuthenticated == true)
                 {
-                    // Try to get the access token for Microsoft Graph
-                    var accessToken = await httpContext.GetTokenAsync("access_token");
+                    // Get the user's Identity Server access token
+                    var identityServerToken = await httpContext.GetTokenAsync("access_token");
                     
-                    if (!string.IsNullOrEmpty(accessToken))
+                    if (!string.IsNullOrEmpty(identityServerToken))
                     {
-                        _logger.LogInformation("Found user access token, creating Graph client with user context");
+                        _logger.LogInformation("Found Identity Server token, attempting On-Behalf-Of flow");
                         
-                        // Create HttpClient with Authorization header
-                        var httpClient = new HttpClient();
-                        httpClient.DefaultRequestHeaders.Authorization = 
-                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken);
+                        // For now, we'll use app-only authentication as user tokens from Identity Server
+                        // cannot be directly used with Microsoft Graph without On-Behalf-Of flow setup
+                        // This would require additional Azure AD configuration
                         
-                        // Create Graph client with custom HttpClient
-                        var graphClient = new GraphServiceClient(httpClient);
-                        return graphClient;
+                        _logger.LogWarning("On-Behalf-Of flow not implemented yet, falling back to app token");
+                        return null;
                     }
                     else
                     {
@@ -168,19 +186,17 @@ namespace MvcClient.Services
                 _logger.LogError(ex, "Error creating user Graph client");
                 return null;
             }
-        }
-
-        // Method to get current user using THEIR OWN token (delegated permissions)
+        }        // Method to get current user using THEIR OWN token (delegated permissions)
         public async Task<User?> GetCurrentUserWithUserTokenAsync()
         {
             try
             {
-                _logger.LogInformation("Getting current user with user token");
+                _logger.LogInformation("Attempting to get current user with user token");
 
                 var userGraphClient = await GetUserGraphClientAsync();
                 if (userGraphClient != null)
                 {
-                    // This uses USER'S TOKEN with delegated permissions
+                    // This would use USER'S TOKEN with delegated permissions
                     var me = await userGraphClient.Me
                         .GetAsync(requestConfiguration =>
                         {
@@ -191,14 +207,19 @@ namespace MvcClient.Services
                     return me;
                 }
 
-                // Fallback to app token method
-                return await GetCurrentUserAsync();
+                // On-Behalf-Of flow not implemented, show clear message
+                _logger.LogWarning("User token flow not available - On-Behalf-Of flow not implemented");
+                throw new InvalidOperationException("Delegated user token access requires On-Behalf-Of (OBO) flow setup. Currently using app-only authentication.");
+            }
+            catch (InvalidOperationException)
+            {
+                // Re-throw our specific error
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting current user with user token, falling back to app token");
-                // Fallback to app token method
-                return await GetCurrentUserAsync();
+                _logger.LogError(ex, "Error getting current user with user token");
+                throw new InvalidOperationException("Unable to access Microsoft Graph with user token. On-Behalf-Of flow required.", ex);
             }
         }
     }
