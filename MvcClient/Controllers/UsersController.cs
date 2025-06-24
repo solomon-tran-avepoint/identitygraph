@@ -14,14 +14,19 @@ namespace MvcClient.Controllers
         {
             _graphService = graphService;
             _logger = logger;
-        }
-
-        public async Task<IActionResult> Index()
+        }        public async Task<IActionResult> Index()
         {
             try
             {
                 var users = await _graphService.GetUsersAsync();
                 return View(users?.Value ?? new List<Microsoft.Graph.Models.User>());
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("Graph API Error"))
+            {
+                _logger.LogError(ex, "Microsoft Graph permission error");
+                ViewBag.Error = $"Permission Error: {ex.Message}. Please check Azure AD app permissions.";
+                ViewBag.PermissionHelp = true;
+                return View(new List<Microsoft.Graph.Models.User>());
             }
             catch (Exception ex)
             {

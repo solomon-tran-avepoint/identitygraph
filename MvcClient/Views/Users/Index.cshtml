@@ -8,11 +8,29 @@
     <div class="row">
         <div class="col-md-12">
             <h2>@ViewData["Title"]</h2>
-            
-            @if (!string.IsNullOrEmpty(ViewBag.Error))
+              @if (!string.IsNullOrEmpty(ViewBag.Error))
             {
                 <div class="alert alert-danger" role="alert">
                     @ViewBag.Error
+                    
+                    @if (ViewBag.PermissionHelp == true)
+                    {
+                        <hr>
+                        <h6>🔧 How to fix this:</h6>
+                        <ol>
+                            <li>Go to <a href="https://portal.azure.com" target="_blank">Azure Portal</a></li>
+                            <li>Navigate to: <strong>Azure Active Directory</strong> → <strong>App registrations</strong></li>
+                            <li>Find your app in the list</li>
+                            <li>Go to <strong>API permissions</strong></li>
+                            <li>Add these permissions:
+                                <ul>
+                                    <li><code>User.Read.All</code> (Application)</li>
+                                    <li><code>Directory.Read.All</code> (Application)</li>
+                                </ul>
+                            </li>
+                            <li>Click <strong>"Grant admin consent"</strong></li>
+                        </ol>
+                    }
                 </div>
             }
 

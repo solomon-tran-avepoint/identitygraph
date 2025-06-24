@@ -19,9 +19,7 @@ namespace MvcClient.Services
 
             var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
             _graphServiceClient = new GraphServiceClient(credential);
-        }
-
-        public async Task<UserCollectionResponse?> GetUsersAsync()
+        }        public async Task<UserCollectionResponse?> GetUsersAsync()
         {
             try
             {
@@ -31,10 +29,17 @@ namespace MvcClient.Services
                     .GetAsync(requestConfiguration =>
                     {
                         requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                        requestConfiguration.QueryParameters.Top = 10; // Limit to 10 users for testing
                     });
 
                 _logger.LogInformation($"Retrieved {users?.Value?.Count ?? 0} users from Microsoft Graph");
                 return users;
+            }
+            catch (Microsoft.Graph.Models.ODataErrors.ODataError odataEx)
+            {
+                _logger.LogError(odataEx, "Microsoft Graph OData Error: {ErrorCode} - {ErrorMessage}", 
+                    odataEx.Error?.Code, odataEx.Error?.Message);
+                throw new InvalidOperationException($"Graph API Error: {odataEx.Error?.Code} - {odataEx.Error?.Message}", odataEx);
             }
             catch (Exception ex)
             {
