@@ -8,5 +8,6 @@ namespace MvcClient.Services
         Task<UserCollectionResponse?> GetUsersAsync();
         Task<User?> GetUserByIdAsync(string userId);
         Task<UserCollectionResponse?> SearchUsersAsync(string searchQuery);
+        Task<User?> GetCurrentUserAsync(); // New method to get current logged-in user
     }
 }

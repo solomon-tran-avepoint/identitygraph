@@ -6,6 +6,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+// Add HttpContextAccessor for accessing user context
+builder.Services.AddHttpContextAccessor();
+
 // Register Graph service
 builder.Services.AddScoped<IGraphService, GraphService>();
 

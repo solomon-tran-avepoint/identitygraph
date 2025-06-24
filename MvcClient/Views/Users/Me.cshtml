@@ -1,0 +1,90 @@
+@model Microsoft.Graph.Models.User
+
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-user"></i> @ViewData["Title"]</h4>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(ViewBag.Error))
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            @ViewBag.Error
+                            <hr>
+                            <small>This shows your profile information from Microsoft Graph API using your authenticated session.</small>
+                        </div>
+                    }
+
+                    @if (Model != null)
+                    {
+                        <div class="row">
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Display Name:</dt>
+                                    <dd class="col-sm-8"><strong>@Model.DisplayName</strong></dd>
+
+                                    <dt class="col-sm-4">Email:</dt>
+                                    <dd class="col-sm-8">@Model.Mail</dd>
+
+                                    <dt class="col-sm-4">User Principal Name:</dt>
+                                    <dd class="col-sm-8">@Model.UserPrincipalName</dd>
+
+                                    <dt class="col-sm-4">User ID:</dt>
+                                    <dd class="col-sm-8"><code>@Model.Id</code></dd>
+                                </dl>
+                            </div>
+                            <div class="col-md-6">
+                                <dl class="row">
+                                    <dt class="col-sm-4">Job Title:</dt>
+                                    <dd class="col-sm-8">@(Model.JobTitle ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Department:</dt>
+                                    <dd class="col-sm-8">@(Model.Department ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Office Location:</dt>
+                                    <dd class="col-sm-8">@(Model.OfficeLocation ?? "Not specified")</dd>
+
+                                    <dt class="col-sm-4">Account Status:</dt>
+                                    <dd class="col-sm-8">
+                                        @if (Model.AccountEnabled == true)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Disabled</span>
+                                        }
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-info-circle"></i> About This Data</h6>
+                                    <p class="mb-0">This information is retrieved from <strong>Microsoft Graph API</strong> using your authenticated identity. 
+                                    This demonstrates how Identity Server provides authentication while Graph API provides access to your organizational data.</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="fas fa-users"></i> View All Users
+                    </a>
+                    <a asp-controller="Home" asp-action="Claims" class="btn btn-outline-primary">
+                        <i class="fas fa-id-card"></i> View Token Claims
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

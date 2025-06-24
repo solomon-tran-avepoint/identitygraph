@@ -80,5 +80,25 @@ namespace MvcClient.Controllers
                 return View("Index", new List<Microsoft.Graph.Models.User>());
             }
         }
+
+        public async Task<IActionResult> Me()
+        {
+            try
+            {
+                var currentUser = await _graphService.GetCurrentUserAsync();
+                if (currentUser == null)
+                {
+                    ViewBag.Error = "Unable to retrieve your profile information.";
+                    return View();
+                }
+                return View(currentUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading current user profile");
+                ViewBag.Error = "Unable to load your profile. Please try again.";
+                return View();
+            }
+        }
     }
 }

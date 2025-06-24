@@ -1,6 +1,7 @@
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Azure.Identity;
+using Microsoft.AspNetCore.Authentication;
 
 namespace MvcClient.Services
 {
@@ -8,18 +9,22 @@ namespace MvcClient.Services
     {
         private readonly GraphServiceClient _graphServiceClient;
         private readonly ILogger<GraphService> _logger;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public GraphService(IConfiguration configuration, ILogger<GraphService> logger)
+        public GraphService(IConfiguration configuration, ILogger<GraphService> logger, IHttpContextAccessor httpContextAccessor)
         {
             _logger = logger;
+            _httpContextAccessor = httpContextAccessor;
             
+            // For now, keep using app-only authentication
+            // TODO: Switch to on-behalf-of flow to use user's token
             var clientId = configuration["AzureAd:ClientId"];
             var clientSecret = configuration["AzureAd:ClientSecret"];
             var tenantId = configuration["AzureAd:TenantId"];
 
             var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
             _graphServiceClient = new GraphServiceClient(credential);
-        }        public async Task<UserCollectionResponse?> GetUsersAsync()
+        }public async Task<UserCollectionResponse?> GetUsersAsync()
         {
             try
             {
@@ -88,6 +93,42 @@ namespace MvcClient.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error searching users with query: {searchQuery}");
+                throw;
+            }
+        }
+
+        public async Task<User?> GetCurrentUserAsync()
+        {
+            try
+            {
+                _logger.LogInformation("Getting current user information");
+
+                // For now, we'll use the app token to get user by their UPN from the claims
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.User?.Identity?.IsAuthenticated == true)
+                {
+                    var userPrincipalName = httpContext.User.FindFirst("preferred_username")?.Value ??
+                                          httpContext.User.FindFirst("upn")?.Value ??
+                                          httpContext.User.FindFirst("email")?.Value;
+
+                    if (!string.IsNullOrEmpty(userPrincipalName))
+                    {
+                        var users = await _graphServiceClient.Users
+                            .GetAsync(requestConfiguration =>
+                            {
+                                requestConfiguration.QueryParameters.Filter = $"userPrincipalName eq '{userPrincipalName}'";
+                                requestConfiguration.QueryParameters.Select = new[] { "id", "displayName", "mail", "userPrincipalName", "jobTitle", "department", "officeLocation" };
+                            });
+
+                        return users?.Value?.FirstOrDefault();
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting current user information");
                 throw;
             }
         }
